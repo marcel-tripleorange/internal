@@ -39,8 +39,9 @@ class OdooAPI:
 def extract_projects_and_tasks(odoo_api):
     print(f"Extracting data at {datetime.now()}")
     
-    # Fetch all projects
-    projects = odoo_api.search_read('project.project', [['display_name', '!=', '']], ['display_name'])
+    # Fetch all projects with additional fields
+    projects = odoo_api.search_read('project.project', [['display_name', '!=', '']], 
+                                    ['display_name', 'partner_id', 'user_id', 'date_start', 'x_studio_location_1'])
     
     all_data = []
     
@@ -49,11 +50,16 @@ def extract_projects_and_tasks(odoo_api):
         project_name = project['display_name']
         
         # Fetch tasks associated with the project
-        tasks = odoo_api.search_read('project.task', [['project_id', '=', project_id]], ['name', 'stage_id', 'date_deadline'])
+        tasks = odoo_api.search_read('project.task', [['project_id', '=', project_id]], 
+                                     ['name', 'stage_id', 'date_deadline', 'priority', 'user_ids'])
         
         project_data = {
             'project_id': project_id,
             'project_name': project_name,
+            'partner_id': project.get('partner_id'),
+            'x_studio_location_1': project.get('x_studio_location_1'),
+            'date_start': project.get('date_start'),
+            'user_id': project.get('user_id'),
             'tasks': tasks
         }
         
@@ -62,12 +68,16 @@ def extract_projects_and_tasks(odoo_api):
     # Print the projects and their tasks
     for project in all_data:
         print(f"Project: {project['project_name']}")
+        print(f"  Customer: {project.get('partner_id')}")
+        print(f"  Location: {project.get('x_studio_location_1')}")
+        print(f"  Date: {project.get('date_start')}")
+        print(f"  Inspector: {project.get('user_id')}")
         for task in project['tasks']:
-            print(f"  Task: {task['name']}, Stage: {task['stage_id']}, Deadline: {task.get('date_deadline')}")
+            print(f"  Task: {task['name']}, Stage: {task['stage_id']}, Deadline: {task.get('date_deadline')}, Priority: {task.get('priority')}, Assigned User: {task.get('user_ids')}")
     
     # Save data to a JSON file
     with open('projects_tasks_data.json', 'w') as f:
-        json.dump(all_data, f)
+        json.dump(all_data, f, default=str)  # default=str to handle datetime serialization
 
 if __name__ == "__main__":
     url = 'https://jfi-techniek-test-13644953.dev.odoo.com'
